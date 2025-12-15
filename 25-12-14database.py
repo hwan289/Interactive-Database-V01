@@ -207,7 +207,7 @@ def render_js_widget(df, language, initial_prompt=""):
                  Tables: 
                   - CRITICAL: Assign the final DataFrame to variable 'result_table'. This renders an INTERACTIVE EXCEL-LIKE table.
                   - Do NOT use 'to_html' or print HTML strings. 'result_table' MUST be a Pandas DataFrame object.
-                  - Regression: 'result_table = pd.read_html(model.summary().tables[1].as_html(), header=0, index_col=0)[0]'
+                  - Regression: Extract coefficients: 'result_table = pd.read_html(model.summary().tables[1].as_html(), flavor="html5lib", header=0, index_col=0)[0]'
                 STRATEGY: PURE PYTHON ONLY.
                   - Use 'statsmodels' (smf.ols, smf.logit) for regression.
                   - Use 'sklearn' for ML/PCA/Clustering.
