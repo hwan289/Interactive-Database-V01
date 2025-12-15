@@ -5,8 +5,7 @@ matplotlib
 seaborn
 scikit-learn
 statsmodels
-puter
-rpy2>=3.0.0
 tabulate
-lxml
 openpyxl
+beautifulsoup4
+html5lib
