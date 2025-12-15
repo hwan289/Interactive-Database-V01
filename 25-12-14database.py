@@ -29,15 +29,7 @@ try:
 except ImportError:
     HAS_PUTER_SDK = False
 
-try:
-    import rpy2.robjects as robjects
-    from rpy2.robjects import pandas2ri
-    from rpy2.robjects import numpy2ri
-    from rpy2.robjects.conversion import localconverter
-    HAS_R = True
-except Exception as e:
-    HAS_R = False
-    R_ERR = str(e)
+HAS_R = False # R support removed for Pure Python deployment
 
 # --- Page Config ---
 st.set_page_config(page_title="Generative Analytics", page_icon="📊", layout="wide")
@@ -204,7 +196,7 @@ def render_js_widget(df, language, initial_prompt=""):
     
     # Dynamic System Prompt based on Language
     if language == "Python":
-        sys_libs = "Libraries: pandas (pd), numpy (np), matplotlib (plt), seaborn (sns), sklearn, statsmodels (sm, smf), rpy2 (robjects), tabulate."
+        sys_libs = "Libraries: pandas (pd), numpy (np), matplotlib (plt), seaborn (sns), sklearn, statsmodels (sm, smf), tabulate."
         sys_extra = """Capabilities: Regression, Path Analysis, PCA, Factor Analysis, Clustering allowed.
                 IMPORTANT: For Factor Analysis, use 'sklearn.decomposition.FactorAnalysis'. Do NOT use 'factor_analyzer'.
                 NOTE: 'FactorAnalysis' object in sklearn might not have 'n_components_'. Use 'components_.shape[0]' instead.
@@ -212,58 +204,17 @@ def render_js_widget(df, language, initial_prompt=""):
                 Style: Use 'sns.set_style("whitegrid")' (Seaborn) for all plots. 
                   - CRITICAL: Do NOT use 'plt.style.use("whitegrid")' (this crashes). Use 'sns.set_style'.
                 Constraint: Use SMALL figure size (6, 4). Do NOT call plt.show(). just create figure.
-                Tables: 
-                 - CRITICAL: Assign the final DataFrame to variable 'result_table'. This renders an INTERACTIVE EXCEL-LIKE table.
-                 - Do NOT print(df) or print(summary) if you assign result_table (avoids duplicate output).
-                 - Regression: Extract coefficients: 'result_table = pd.read_html(model.summary().tables[1].as_html(), header=0, index_col=0)[0]'
-                RPY2 USAGE: 'pandas2ri.activate()' is DEPRECATED and will fail. 
-                  - Use 'from rpy2.robjects.conversion import localconverter'
-                  - Use 'with localconverter(robjects.default_converter + pandas2ri.converter) as cv:' context.
-                  - Example:
-                    import tempfile
-                    with tempfile.NamedTemporaryFile(mode='w+', suffix='.csv') as tmp:
-                        df.to_csv(tmp.name, index=False)
-                        robjects.r(f'data <- read.csv("{{tmp.name}}")')"""
+                 Tables: 
+                  - CRITICAL: Assign the final DataFrame to variable 'result_table'. This renders an INTERACTIVE EXCEL-LIKE table.
+                  - Do NOT use 'to_html' or print HTML strings. 'result_table' MUST be a Pandas DataFrame object.
+                  - Regression: 'result_table = pd.read_html(model.summary().tables[1].as_html(), header=0, index_col=0)[0]'
+                STRATEGY: PURE PYTHON ONLY.
+                  - Use 'statsmodels' (smf.ols, smf.logit) for regression.
+                  - Use 'sklearn' for ML/PCA/Clustering.
+                  - CRITICAL: Do NOT import rpy2. Do NOT use R. PURE PYTHON ONLY."""
         code_example = """# [Python Code Block]
                 import pandas as pd
                 # ... code ..."""
-    else: # R
-        sys_libs = "Libraries: rpy2.robjects, rpy2.robjects.pandas2ri, rpy2.robjects.conversion.localconverter."
-        sys_extra = """Capabilities: Linear Models (lm), GLM, Plotting, Summary Statistics via R.
-                Structure: Write PYTHON code that uses 'rpy2' to execute R commands.
-                INSTRUCTION:
-                 1. Environment: 'df' (Pandas DataFrame) is ALREADY available.
-                 2. Imports: You MUST run 'import pandas as pd' and 'import rpy2.robjects as robjects'.
-                 3. Conversion: Use 'localconverter' with 'pandas2ri.converter'. Do NOT use 'activate()' (Deprecated).
-                   Pattern: Use 'with localconverter(...) as cv:' then 'r_df = cv.py2rpy(df)'.
-                 4. R Script: Define your R logic in a string 'r_script' and run it with 'robjects.r(r_script)'.
-                 5. Validation: Ensure you use column names that actually exist in the 'df'.
-                CRITICAL Constraints:
-                 - Do NOT use 'pandas2ri.activate()'.
-                 - Do NOT write R syntax directly in Python lines.
-                 - Always import pandas."""
-        code_example = """# [Python/R Bridge Code]
-                import pandas as pd
-                import rpy2.robjects as robjects
-                from rpy2.robjects import pandas2ri
-                from rpy2.robjects.conversion import localconverter
-                
-                # 1. Convert Data
-                # 'df' is already in the environment
-                with localconverter(robjects.default_converter + pandas2ri.converter) as cv:
-                    r_df = cv.py2rpy(df)
-                robjects.globalenv['df'] = r_df
-                
-                # 2. R Analytics Script
-                r_script = \"\"\"
-                summary(df)
-                model <- lm(Revenue ~ Age, data=df)
-                print(summary(model))
-                \"\"\"
-                
-                # 3. Execute
-                res = robjects.r(r_script)
-                print(str(res))"""
 
     html = f"""
     <!DOCTYPE html>
